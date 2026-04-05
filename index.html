@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 微信端核心适配：禁止缩放、全屏显示 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>直线控制小游戏</title>
     <style>
@@ -10,19 +9,16 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* 禁止微信浏览器默认触摸行为 */
             touch-action: manipulation;
         }
         body {
             overflow: hidden;
             background: #f5f5f5;
         }
-        /* 画布：坐标系 + 直线绘制区域 */
         #canvas {
             display: block;
             background: white;
         }
-        /* 右上角函数显示框 */
         #funcBox {
             position: fixed;
             top: 20px;
@@ -35,7 +31,6 @@
             font-weight: bold;
             z-index: 999;
         }
-        /* 操作提示 */
         #tip {
             position: fixed;
             bottom: 30px;
@@ -58,20 +53,19 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const funcBox = document.getElementById('funcBox');
 
-// 设置画布尺寸 = 屏幕尺寸（全屏）
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// 强制立即设置画布尺寸
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    centerX = canvas.width / 2;
+    centerY = canvas.height / 2;
+}
 
-// 坐标系中心点（屏幕正中央）
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2;
-// 坐标系网格大小（像素）
+let centerX, centerY;
 const gridSize = 40;
-
-// 直线参数
-let a = 1.0;  // 斜率
-let b = 0.0;  // 截距
-let lastTouch = null; // 触摸记录
+let a = 1.0;
+let b = 0.0;
+let lastTouch = null;
 
 // ========== 绘制坐标系 ==========
 function drawCoordinate() {
@@ -79,7 +73,6 @@ function drawCoordinate() {
     ctx.strokeStyle = '#ccc';
     ctx.lineWidth = 1;
 
-    // 绘制竖网格线
     for (let x = centerX; x < canvas.width; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -93,7 +86,6 @@ function drawCoordinate() {
         ctx.stroke();
     }
 
-    // 绘制横网格线
     for (let y = centerY; y < canvas.height; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -107,21 +99,18 @@ function drawCoordinate() {
         ctx.stroke();
     }
 
-    // 绘制X轴、Y轴（加粗）
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
-    // X轴
     ctx.beginPath();
     ctx.moveTo(0, centerY);
     ctx.lineTo(canvas.width, centerY);
     ctx.stroke();
-    // Y轴
+    
     ctx.beginPath();
     ctx.moveTo(centerX, 0);
     ctx.lineTo(centerX, canvas.height);
     ctx.stroke();
 
-    // 绘制原点
     ctx.fillStyle = '#ff4444';
     ctx.beginPath();
     ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
@@ -134,13 +123,11 @@ function drawLine() {
     ctx.lineWidth = 3;
     ctx.beginPath();
 
-    // 计算直线两个端点（全屏绘制）
     let x1 = -canvas.width;
     let y1 = a * x1 + b;
     let x2 = canvas.width;
     let y2 = a * x2 + b;
 
-    // 坐标系坐标转屏幕像素坐标
     let px1 = centerX + x1;
     let py1 = centerY - y1;
     let px2 = centerX + x2;
@@ -151,14 +138,14 @@ function drawLine() {
     ctx.stroke();
 }
 
-// ========== 更新函数解析式显示 ==========
+// ========== 更新函数显示 ==========
 function updateFunc() {
     let aStr = a.toFixed(2);
     let bStr = b.toFixed(2);
     funcBox.innerText = `y = ${aStr}x + ${bStr}`;
 }
 
-// ========== 触摸控制逻辑 ==========
+// ========== 触摸控制 ==========
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
@@ -169,45 +156,43 @@ canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     const touches = e.touches;
 
-    // 单指：平移直线（修改截距b）
     if (touches.length === 1) {
         const touch = touches[0];
         const dx = touch.clientX - lastTouch.x;
         const dy = lastTouch.y - touch.clientY;
-
-        // 平移量转换为坐标系截距
-        b += dy / gridSize;
+        
+        // 这里 ×3 提速
+        b += dy / gridSize * 3;
+        
         lastTouch = { x: touch.clientX, y: touch.clientY };
     }
 
-    // 双指：旋转直线（修改斜率a）
     if (touches.length === 2) {
         const t1 = touches[0];
         const t2 = touches[1];
-        // 计算双指夹角，转换为斜率
         const angle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
         a = -Math.tan(angle);
     }
 
-    // 刷新画面
+    drawAll();
+});
+
+function drawAll() {
     drawCoordinate();
     drawLine();
     updateFunc();
+}
+
+// ========== 页面加载立即执行 ==========
+window.addEventListener('load', () => {
+    resizeCanvas();
+    drawAll();
 });
 
-// ========== 初始化 ==========
-drawCoordinate();
-drawLine();
-updateFunc();
-
-// 窗口大小变化适配
+// 适配窗口变化
 window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    centerX = canvas.width / 2;
-    centerY = canvas.height / 2;
-    drawCoordinate();
-    drawLine();
+    resizeCanvas();
+    drawAll();
 });
 </script>
 </body>
