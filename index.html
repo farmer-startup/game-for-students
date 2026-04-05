@@ -161,8 +161,8 @@ canvas.addEventListener('touchmove', (e) => {
         const dx = touch.clientX - lastTouch.x;
         const dy = lastTouch.y - touch.clientY;
         
-        // 这里 ×3 提速
-        b += dy / gridSize * 3;
+        // 这里 ×10 提速
+        b += dy / gridSize * 10;
         
         lastTouch = { x: touch.clientX, y: touch.clientY };
     }
